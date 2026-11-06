@@ -36,6 +36,10 @@ export function shortDate(date: string): string {
 	});
 }
 
+export function weekdayShort(date: string): string {
+	return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { ...UTC, weekday: 'short' });
+}
+
 export function monthName(date: string): string {
 	return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { ...UTC, month: 'long', year: 'numeric' });
 }

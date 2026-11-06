@@ -18,7 +18,15 @@ class Auth {
 
 	private userId: string | null = null;
 
-	start() {
+	async start() {
+		if (import.meta.env.DEV) {
+			const demo = await import('./demo');
+			if (demo.demoEnabled()) {
+				this.session = { user: { id: 'demo', email: 'demo@example.com' } } as Session;
+				await this.load();
+				return;
+			}
+		}
 		supabase.auth.onAuthStateChange((event, session) => {
 			this.session = session;
 			if (event === 'PASSWORD_RECOVERY') this.recovering = true;

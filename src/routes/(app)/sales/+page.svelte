@@ -3,7 +3,7 @@
 	import Kpi from '$lib/components/Kpi.svelte';
 	import RangePicker from '$lib/components/RangePicker.svelte';
 	import Status from '$lib/components/Status.svelte';
-	import { addDays, change, longDate, rupiah, shortDate, today, WEEKDAYS } from '$lib/format';
+	import { addDays, change, longDate, rupiah, shortDate, today, weekdayShort, WEEKDAYS } from '$lib/format';
 	import { outlets } from '$lib/outlet.svelte';
 	import { rpc } from '$lib/supabase';
 
@@ -43,7 +43,7 @@
 	const compact = $derived(allDays.length > 31);
 	const bars = $derived(
 		allDays.map((d) => ({
-			label: compact ? '' : shortDate(d.date).split(', ')[0],
+			label: compact ? '' : weekdayShort(d.date),
 			sublabel: compact ? '' : d.date.slice(8).replace(/^0/, ''),
 			value: Number(d.sales),
 			highlight: d.date === today(),

@@ -10,6 +10,10 @@ export const supabase = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
 });
 
 export async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
+	if (import.meta.env.DEV) {
+		const demo = await import('./demo');
+		if (demo.demoEnabled()) return demo.demoRpc(fn, args) as T;
+	}
 	const { data, error } = await supabase.rpc(fn, args);
 	if (error) throw new Error(error.message);
 	return data as T;
