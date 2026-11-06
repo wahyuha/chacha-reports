@@ -43,9 +43,7 @@ pnpm check
 
 ## Deploy
 
-```bash
-pnpm build && netlify deploy --prod --dir build
-```
+Netlify builds and deploys every push to `main`. Work on a `feature/…` branch and merge it into `main` to release.
 
 ## Database
 
