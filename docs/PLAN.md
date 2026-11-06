@@ -37,6 +37,12 @@ A client-side SvelteKit app on Netlify, reading the POS data in Supabase.
 3. **App**: Attendance and Salary screens.
 4. **Locking**: an approved month never changes. If orders arrive or are cancelled after locking, the commission difference moves to the next month as a correction.
 
+## Status (6 Nov 2026)
+
+- Phase 1 and the dashboard side of Phase 2 are live at reports.chacha.id. Migrations `003` and `004` are applied, sign-up is off, and the `manage-users` function is deployed.
+- The POS clock-in change is built as version 0.2.0 and still needs installing on the tablet.
+- Sending invitations needs "Verify JWT with legacy secret" turned off on the `manage-users` function. The project signs sign-in tokens with an ECC key, which the legacy check rejects; the function checks the caller itself.
+
 ## Applying database changes
 
 Run the files in `supabase/migrations` in order in the Supabase SQL editor. `001` and `002` live in the POS project. Then set the first owner once:
