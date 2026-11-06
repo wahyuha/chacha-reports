@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+/* Chacha design system tokens */
+@theme {
+	--color-ivory: #f7f4ee;
+	--color-raised: #ffffff;
+	--color-stone: #e6dfd4;
+	--color-ink: #1a2e2a;
+	--color-muted: #5a6964;
+	--color-forest: #164942;
+	--color-pine: #0f302b;
+	--color-mist: #c9d5cf;
+	--color-mist-soft: #e3eae6;
+	--color-wash: #819a89;
+	--color-wash-text: #4f6a62;
+	--color-brass: #c8a165;
+	--color-brass-text: #86622c;
+	--color-danger: #a5402d;
+
+	--font-display: 'Jost Variable', Futura, 'Century Gothic', system-ui, sans-serif;
+	--font-sans: 'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+	html {
+		background: var(--color-ivory);
+		color: var(--color-ink);
+		font-family: var(--font-sans);
+		font-size: 14px;
+		line-height: 22px;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-forest);
+		outline-offset: 2px;
+	}
+
+	button:not(:disabled),
+	[role='button'] {
+		cursor: pointer;
+	}
+}
+
+@layer components {
+	.card {
+		@apply rounded-xl border border-stone bg-raised p-6;
+	}
+	.card-title {
+		@apply font-display text-[22px] leading-7 font-medium;
+	}
+	.eyebrow {
+		@apply font-display text-xs leading-4 font-medium tracking-[0.32em] text-wash-text uppercase;
+	}
+	.page-title {
+		@apply font-display text-[32px] leading-10 font-medium text-forest sm:text-[40px] sm:leading-12;
+	}
+	.btn {
+		@apply inline-flex min-h-11 items-center justify-center rounded-xl border border-stone bg-raised px-3.5 font-semibold text-forest disabled:opacity-50;
+	}
+	.btn-primary {
+		@apply border-forest bg-forest text-white;
+	}
+	.btn-danger {
+		@apply text-danger;
+	}
+	.input {
+		@apply min-h-11 rounded-md border border-stone bg-raised px-3 font-normal text-ink;
+	}
+	.num {
+		font-variant-numeric: tabular-nums;
+	}
+	.th {
+		@apply px-2 py-2 font-semibold text-muted;
+	}
+	.td {
+		@apply border-t border-stone px-2 py-2;
+	}
+}
