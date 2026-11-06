@@ -23,7 +23,11 @@ Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: headers(req) });
 	if (req.method !== 'POST') return reply(405, { error: 'Method not allowed' });
 
-	const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+	// Projects on the new API keys expose the secret key in SUPABASE_SECRET_KEYS; older ones as the service role key.
+	const secretKey =
+		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
+		(JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>).default;
+	const admin = createClient(Deno.env.get('SUPABASE_URL')!, secretKey, {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
 
