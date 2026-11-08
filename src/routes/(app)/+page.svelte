@@ -5,7 +5,7 @@
 	import ItemTable from '$lib/components/ItemTable.svelte';
 	import Kpi from '$lib/components/Kpi.svelte';
 	import Status from '$lib/components/Status.svelte';
-	import { addDays, change, dateTime, longDate, rupiah, share, today, weekdayOf } from '$lib/format';
+	import { addDays, change, dateTime, longDate, rupiah, today, weekdayOf } from '$lib/format';
 	import type { Item } from '$lib/items';
 	import { loadMargin, marginOf, marginPct, pct, type MarginReport } from '$lib/margin';
 	import { outlets } from '$lib/outlet.svelte';
@@ -89,10 +89,6 @@
 		return c ? `${c} ${lastWeekday}` : `No sales last ${weekdayOf(date)}`;
 	};
 	const hasSales = $derived(Number(report?.totals.orders ?? 0) > 0);
-	const percentages = (levels: Record<string, number>, order: string[]) => {
-		const total = Object.values(levels).reduce((a, b) => a + Number(b), 0);
-		return order.map((l) => `${l[0].toUpperCase()}${l.slice(1)} ${share(Number(levels[l] ?? 0), total)}%`).join(' · ');
-	};
 	const itemCups = $derived(items.reduce((a, r) => a + Number(r.cups), 0));
 	const itemSales = $derived(items.reduce((a, r) => a + Number(r.sales), 0));
 	const marginNote = $derived.by(() => {
@@ -178,9 +174,9 @@
 		<section class="card min-w-0">
 			<h2 class="card-title m-0">Sales by item</h2>
 			<div class="num mb-4 text-muted">{items.length} drinks · {itemCups} cups · {rupiah(itemSales)}</div>
-			<ItemCards {items} {margin} />
+			<ItemCards {items} {margin} foodCost={false} />
 			<div class="mt-6">
-				<ItemTable {items} {margin} title="Every drink" />
+				<ItemTable {items} {margin} title="Every drink" foodCost={false} />
 			</div>
 		</section>
 
@@ -200,8 +196,17 @@
 			</section>
 			<section class="card !p-5">
 				<h2 class="m-0 mb-3 font-display text-xl font-medium">Sugar and ice</h2>
-				<div class="flex justify-between gap-3"><span>Sugar</span><span>{percentages(report.sugar, ['normal', 'less', 'zero'])}</span></div>
-				<div class="mt-1.5 flex justify-between gap-3"><span>Ice</span><span>{percentages(report.ice, ['normal', 'less'])}</span></div>
+				{#each [['Sugar', report.sugar, ['normal', 'less', 'zero']], ['Ice', report.ice, ['normal', 'less']]] as const as [name, levels, order], g}
+					<h3 class="m-0 text-base font-semibold {g ? 'mt-3' : ''}">{name}</h3>
+					<dl class="m-0">
+						{#each order as level}
+							<div class="flex justify-between gap-3">
+								<dt class="capitalize">{level}</dt>
+								<dd class="num m-0">{Number(levels[level] ?? 0)} cups</dd>
+							</div>
+						{/each}
+					</dl>
+				{/each}
 			</section>
 			<section class="card !p-5">
 				<h2 class="m-0 mb-3 font-display text-xl font-medium">Cancelled</h2>

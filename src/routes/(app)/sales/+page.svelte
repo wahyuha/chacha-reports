@@ -54,7 +54,9 @@
 		}
 		return out;
 	});
-	const average = $derived(allDays.length ? Number(report?.totals.sales ?? 0) / allDays.length : 0);
+	/** Days the outlet sold something: closed days and days before opening don't pull the averages down. */
+	const salesDays = $derived(report?.days.filter((d) => Number(d.orders) > 0).length ?? 0);
+	const average = $derived(salesDays ? Number(report?.totals.sales ?? 0) / salesDays : 0);
 	const compact = $derived(allDays.length > 31);
 	const bars = $derived(
 		allDays.map((d) => ({
@@ -67,13 +69,13 @@
 	);
 	const note = (now: number, before: number) => {
 		const c = change(now, before);
-		return c ? `${c} vs previous ${allDays.length} days` : 'Nothing to compare with yet';
+		return c ? `${c} vs ${allDays.length === 1 ? 'the day before' : `previous ${allDays.length} days`}` : 'Nothing to compare with yet';
 	};
 	const maxWeekday = $derived(Math.max(1, ...(report?.weekdays ?? []).map((w) => Number(w.avg_sales))));
 
 	const marginDay = $derived(new Map((margin?.days ?? []).map((d) => [d.date, d])));
 	const dayMargin = (date: string) => marginDay.get(date) ?? EMPTY;
-	const marginAverage = $derived(margin && allDays.length ? marginOf(margin.totals) / allDays.length : 0);
+	const marginAverage = $derived(margin && salesDays ? marginOf(margin.totals) / salesDays : 0);
 	const marginBars = $derived(
 		allDays.map((d) => {
 			const m = dayMargin(d.date);
@@ -110,7 +112,7 @@
 <header class="flex flex-wrap items-end justify-between gap-4">
 	<h1 class="page-title m-0">Sales</h1>
 	<div class="flex flex-wrap items-center gap-2">
-		<RangePicker bind:from bind:to />
+		<RangePicker bind:from bind:to singleDays />
 		<button class="btn" onclick={exportCsv} disabled={!report}>Export CSV</button>
 	</div>
 </header>
@@ -122,7 +124,7 @@
 		<Kpi label="Sales" value={rupiah(report.totals.sales)} note={note(report.totals.sales, report.previous.sales)} />
 		<Kpi label="Cups" value={String(report.totals.cups)} note={note(report.totals.cups, report.previous.cups)} />
 		<Kpi label="Orders" value={String(report.totals.orders)} note={note(report.totals.orders, report.previous.orders)} />
-		<Kpi label="Average per day" value={rupiah(average)} note="{Math.round(Number(report.totals.cups) / allDays.length)} cups a day" />
+		<Kpi label="Average per day" value={rupiah(average)} note="{salesDays ? Math.round(Number(report.totals.cups) / salesDays) : 0} cups a day · {salesDays} {salesDays === 1 ? 'day' : 'days'} with sales" />
 		{#if margin}
 			<Kpi
 				label="Gross margin"
@@ -133,11 +135,11 @@
 	</section>
 
 	{#if !report.days.length}
-		<Status empty={`No sales recorded from ${longDate(from)} to ${longDate(to)}.`} />
+		<Status empty={from === to ? `No sales recorded on ${longDate(from)}.` : `No sales recorded from ${longDate(from)} to ${longDate(to)}.`} />
 	{:else}
 		<section class="card">
 			<h2 class="card-title m-0">Sales per day</h2>
-			<div class="text-muted">{longDate(from)} to {longDate(to)}. Dashed line: daily average, {rupiah(average)}.</div>
+			<div class="text-muted">{from === to ? longDate(from) : `${longDate(from)} to ${longDate(to)}`}. Dashed line: average per day with sales, {rupiah(average)}.</div>
 			<div class="mt-5 overflow-x-auto">
 				<div class={allDays.length > 14 ? 'min-w-[640px]' : ''}>
 					<BarChart {bars} title="Sales per day" format={(v) => `${Math.round(v / 1000)}k`} reference={average} />
@@ -175,7 +177,7 @@
 					<div class="rounded-xl bg-mist-soft p-4">
 						<dt class="text-muted">Margin per day</dt>
 						<dd class="num m-0 mt-1 text-2xl leading-8 font-bold whitespace-nowrap">{rupiah(Math.round(marginAverage))}</dd>
-						<dd class="m-0 text-[13px] text-muted">Over {allDays.length} days</dd>
+						<dd class="m-0 text-[13px] text-muted">Over {salesDays} {salesDays === 1 ? 'day' : 'days'} with sales</dd>
 					</div>
 					<div class="rounded-xl bg-mist-soft p-4">
 						<dt class="text-muted">Cups without HPP</dt>
@@ -184,7 +186,7 @@
 					</div>
 				</dl>
 				<h3 class="m-0 mt-6 text-base font-semibold">Margin per day</h3>
-				<div class="text-muted">Dashed line: daily average, {rupiah(Math.round(marginAverage))}.</div>
+				<div class="text-muted">Dashed line: average per day with sales, {rupiah(Math.round(marginAverage))}.</div>
 				<div class="mt-4 overflow-x-auto">
 					<div class={allDays.length > 14 ? 'min-w-[640px]' : ''}>
 						<BarChart bars={marginBars} title="Gross margin per day" format={(v) => `${Math.round(v / 1000)}k`} reference={marginAverage} />

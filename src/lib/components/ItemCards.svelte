@@ -3,7 +3,7 @@
 	import { groupByCategory, type Item } from '$lib/items';
 	import { foodCostOf, HIGH_FOOD_COST, marginOf, marginPct, pct, type MarginReport, type MarginRow } from '$lib/margin';
 
-	let { items, margin = null }: { items: Item[]; margin?: MarginReport | null } = $props();
+	let { items, margin = null, foodCost = true }: { items: Item[]; margin?: MarginReport | null; foodCost?: boolean } = $props();
 
 	const groups = $derived(groupByCategory(items, margin));
 	const cups = $derived(items.reduce((a, r) => a + Number(r.cups), 0));
@@ -15,9 +15,11 @@
 	<div class="mt-2 border-t border-stone pt-2">
 		{#if Number(m.costed_sales)}
 			<div class="num font-semibold">Margin {rupiah(marginOf(m))} · {pct(marginPct(m))}</div>
-			<div class="num text-[13px] {fc != null && fc > HIGH_FOOD_COST ? 'font-semibold text-danger' : 'text-muted'}">
-				Food cost {pct(fc)}{#if fc != null && fc > HIGH_FOOD_COST}, High{/if}
-			</div>
+			{#if foodCost}
+				<div class="num text-[13px] {fc != null && fc > HIGH_FOOD_COST ? 'font-semibold text-danger' : 'text-muted'}">
+					Food cost {pct(fc)}{#if fc != null && fc > HIGH_FOOD_COST}, High{/if}
+				</div>
+			{/if}
 		{:else}
 			<div class="text-muted">No HPP set</div>
 		{/if}

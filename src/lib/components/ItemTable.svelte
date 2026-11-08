@@ -7,8 +7,9 @@
 		items,
 		margin = null,
 		title,
-		subtitle = ''
-	}: { items: Item[]; margin?: MarginReport | null; title: string; subtitle?: string } = $props();
+		subtitle = '',
+		foodCost = true
+	}: { items: Item[]; margin?: MarginReport | null; title: string; subtitle?: string; foodCost?: boolean } = $props();
 
 	type Sort = 'cups' | 'sales' | 'margin';
 	let sortBy = $state<Sort>('cups');
@@ -66,7 +67,7 @@
 					<th scope="col" class="th">HPP / cup</th>
 					<th scope="col" class="th">Margin / cup</th>
 					<th scope="col" class="th">Margin</th>
-					<th scope="col" class="th">Food cost</th>
+					{#if foodCost}<th scope="col" class="th">Food cost</th>{/if}
 				{/if}
 			</tr>
 		</thead>
@@ -89,11 +90,13 @@
 							<td class="td">{rupiah(Math.round(r.hpp))}</td>
 							<td class="td">{rupiah(Math.round(r.perCup))}</td>
 							<td class="td font-semibold">{rupiah(r.margin)}</td>
-							<td class="td {r.foodCost != null && r.foodCost > HIGH_FOOD_COST ? 'font-semibold text-danger' : ''}">
-								{pct(r.foodCost)}{#if r.foodCost != null && r.foodCost > HIGH_FOOD_COST}&nbsp;High{/if}
-							</td>
+							{#if foodCost}
+								<td class="td {r.foodCost != null && r.foodCost > HIGH_FOOD_COST ? 'font-semibold text-danger' : ''}">
+									{pct(r.foodCost)}{#if r.foodCost != null && r.foodCost > HIGH_FOOD_COST}&nbsp;High{/if}
+								</td>
+							{/if}
 						{:else}
-							<td class="td text-danger" colspan="4">No HPP set</td>
+							<td class="td text-danger" colspan={foodCost ? 4 : 3}>No HPP set</td>
 						{/if}
 					{/if}
 				</tr>
@@ -103,7 +106,7 @@
 </div>
 {#if margin}
 	<p class="m-0 mt-3 text-[13px] text-muted">
-		Margin = price charged − HPP (ingredients + packaging), before staff, rent and utilities. Food cost above {HIGH_FOOD_COST}% is
-		marked High. If HPP changed during the period, HPP per cup is the average.
+		Margin = price charged − HPP (ingredients + packaging), before staff, rent and utilities.{#if foodCost}
+		Food cost above {HIGH_FOOD_COST}% is marked High.{/if} If HPP changed during the period, HPP per cup is the average.
 	</p>
 {/if}
