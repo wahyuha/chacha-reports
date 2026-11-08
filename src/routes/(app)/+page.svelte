@@ -202,7 +202,7 @@
 						{#each order as level}
 							<div class="flex justify-between gap-3">
 								<dt class="capitalize">{level}</dt>
-								<dd class="num m-0">{Number(levels[level] ?? 0)} cups</dd>
+								<dd class="num m-0">{Number(levels[level] ?? 0)} {Number(levels[level] ?? 0) === 1 ? 'cup' : 'cups'}</dd>
 							</div>
 						{/each}
 					</dl>
