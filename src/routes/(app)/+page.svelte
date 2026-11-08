@@ -22,10 +22,13 @@
 		freshness: { last_received_at: string | null; device_seen_at: string | null };
 	};
 	type Metric = 'orders' | 'cups' | 'sales';
+	type Item = { code: string; name: string; category: string; cups: number; sales: number };
 
 	let date = $state(today());
 	let metric = $state<Metric>('orders');
+	let itemSort = $state<'cups' | 'sales'>('cups');
 	let report = $state<Report | null>(null);
+	let items = $state<Item[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 
@@ -34,9 +37,14 @@
 		const day = date;
 		loading = true;
 		error = '';
-		rpc<Report>('report_daily', { p_outlet: code, p_date: day })
-			.then((r) => {
-				if (day === date) report = r;
+		Promise.all([
+			rpc<Report>('report_daily', { p_outlet: code, p_date: day }),
+			rpc<Item[]>('report_products', { p_outlet: code, p_from: day, p_to: day })
+		])
+			.then(([r, list]) => {
+				if (day !== date) return;
+				report = r;
+				items = list;
 			})
 			.catch((e) => (error = e.message))
 			.finally(() => (loading = false));
@@ -74,7 +82,20 @@
 		const total = Object.values(levels).reduce((a, b) => a + Number(b), 0);
 		return order.map((l) => `${l[0].toUpperCase()}${l.slice(1)} ${share(Number(levels[l] ?? 0), total)}%`).join(' · ');
 	};
-	const topMax = $derived(Math.max(1, ...(report?.top ?? []).map((p) => Number(p.cups))));
+	const itemCups = $derived(items.reduce((a, r) => a + Number(r.cups), 0));
+	const itemSales = $derived(items.reduce((a, r) => a + Number(r.sales), 0));
+	const itemCategories = $derived.by(() => {
+		const map = new Map<string, { cups: number; sales: number }>();
+		for (const r of items) {
+			const c = map.get(r.category) ?? { cups: 0, sales: 0 };
+			c.cups += Number(r.cups);
+			c.sales += Number(r.sales);
+			map.set(r.category, c);
+		}
+		return [...map.entries()].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.cups - a.cups);
+	});
+	const sortedItems = $derived([...items].sort((a, b) => Number(b[itemSort]) - Number(a[itemSort]) || Number(b.cups) - Number(a.cups)));
+	const itemMax = $derived(Math.max(1, ...items.map((r) => Number(r.cups))));
 </script>
 
 <svelte:head><title>Daily · Chacha Reports</title></svelte:head>
@@ -129,8 +150,7 @@
 	{#if !hasSales}
 		<Status empty={`No sales recorded on ${longDate(date)}.`} />
 	{:else}
-		<div class="flex flex-wrap gap-4">
-			<section class="card min-w-0 flex-[2_1_480px]">
+		<section class="card min-w-0">
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<div>
 						<h2 class="card-title m-0">{metric === 'orders' ? 'Orders' : metric === 'cups' ? 'Cups' : 'Sales'} by hour</h2>
@@ -145,27 +165,60 @@
 				<div class="mt-5">
 					<BarChart {bars} title="{metric} by hour" format={(v) => (metric === 'sales' ? `${Math.round(v / 1000)}k` : String(v))} />
 				</div>
-			</section>
+		</section>
 
-			<section class="card min-w-0 flex-[1_1_300px]">
-				<div class="flex items-baseline justify-between gap-3">
-					<h2 class="card-title m-0">Best sellers</h2>
-					<a class="text-forest underline" href="/products">See all</a>
+		<section class="card min-w-0">
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<div>
+					<h2 class="card-title m-0">Sales by item</h2>
+					<div class="num text-muted">{items.length} drinks · {itemCups} cups · {rupiah(itemSales)}</div>
 				</div>
-				<ol class="m-0 mt-4 flex list-none flex-col gap-3.5 p-0">
-					{#each report.top as p, i}
-						<li>
-							<div class="flex justify-between gap-3">
-								<span class="font-semibold">{i + 1}. {p.name}</span>
-								<span class="num whitespace-nowrap">{p.cups} cups</span>
-							</div>
-							<div class="mt-1 h-2 rounded bg-mist-soft"><div class="h-2 rounded bg-forest" style:width="{(Number(p.cups) / topMax) * 100}%"></div></div>
-							<div class="num text-[13px] text-muted">{rupiah(p.sales)}</div>
-						</li>
-					{/each}
-				</ol>
-			</section>
-		</div>
+				<div role="group" aria-label="Sort by" class="flex gap-1">
+					<button class="btn {itemSort === 'cups' ? 'btn-primary' : ''}" aria-pressed={itemSort === 'cups'} onclick={() => (itemSort = 'cups')}>Most cups</button>
+					<button class="btn {itemSort === 'sales' ? 'btn-primary' : ''}" aria-pressed={itemSort === 'sales'} onclick={() => (itemSort = 'sales')}>Most sales</button>
+				</div>
+			</div>
+			<div class="mt-4 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+				{#each itemCategories as c}
+					<div class="rounded-xl border border-stone p-4">
+						<div class="eyebrow">{c.name}</div>
+						<div class="num mt-1 text-xl font-bold">{c.cups} cups</div>
+						<div class="num text-muted">{rupiah(c.sales)} · {share(c.cups, itemCups)}% of cups</div>
+					</div>
+				{/each}
+			</div>
+			<div class="mt-3 overflow-x-auto">
+				<table class="num w-full min-w-[640px] border-collapse text-right">
+					<thead>
+						<tr>
+							<th scope="col" class="th w-8 text-left">#</th>
+							<th scope="col" class="th text-left">Drink</th>
+							<th scope="col" class="th text-left">Category</th>
+							<th scope="col" class="th">Cups</th>
+							<th scope="col" class="th w-52 text-left">Share of cups</th>
+							<th scope="col" class="th">Sales</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each sortedItems as r, i}
+							<tr>
+								<td class="td text-left text-muted">{i + 1}</td>
+								<td class="td text-left font-semibold">{r.name}</td>
+								<td class="td text-left text-muted">{r.category}</td>
+								<td class="td">{r.cups}</td>
+								<td class="td">
+									<div class="flex items-center gap-2">
+										<div class="h-2 flex-auto rounded bg-mist-soft"><div class="h-2 rounded bg-forest" style:width="{(Number(r.cups) / itemMax) * 100}%"></div></div>
+										<span class="w-9">{share(Number(r.cups), itemCups)}%</span>
+									</div>
+								</td>
+								<td class="td">{rupiah(r.sales)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</section>
 
 		<div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
 			<section class="card !p-5">

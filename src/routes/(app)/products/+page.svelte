@@ -8,7 +8,7 @@
 	type Row = { code: string; name: string; category: string; cups: number; sales: number };
 
 	let to = $state(today());
-	let from = $state(addDays(today(), -13));
+	let from = $state(today());
 	let rows = $state<Row[] | null>(null);
 	let loading = $state(true);
 	let error = $state('');
@@ -50,7 +50,7 @@
 <header class="flex flex-wrap items-end justify-between gap-4">
 	<h1 class="page-title m-0">Best sellers</h1>
 	<div class="flex flex-wrap items-center gap-2">
-		<RangePicker bind:from bind:to />
+		<RangePicker bind:from bind:to singleDays />
 		<label class="flex items-center gap-2 text-muted">
 			Category
 			<select class="input" bind:value={category}>
@@ -64,9 +64,14 @@
 {#if error || (loading && !rows)}
 	<Status {loading} {error} />
 {:else if rows && !rows.length}
-	<Status empty={`No sales recorded from ${longDate(from)} to ${longDate(to)}.`} />
+	<Status empty={from === to ? `No sales recorded on ${longDate(from)}.` : `No sales recorded from ${longDate(from)} to ${longDate(to)}.`} />
 {:else if rows}
-	<section aria-label="Category totals" class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+	<section aria-label="Category totals" class="grid grid-cols-2 gap-4 xl:grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
+		<div class="rounded-xl border-2 border-forest bg-raised p-4">
+			<div class="eyebrow">Total</div>
+			<div class="num mt-2 text-[26px] leading-[34px] font-bold">{totalCups} cups</div>
+			<div class="num text-muted">{rupiah(totalSales)} · {rows.length} drinks</div>
+		</div>
 		{#each categories as c}
 			<div class="rounded-xl border border-stone bg-raised p-4">
 				<div class="eyebrow">{c.name}</div>

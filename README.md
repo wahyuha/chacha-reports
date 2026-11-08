@@ -8,9 +8,9 @@ It's a client-side SvelteKit app on Netlify, reading the POS data in Supabase th
 
 | Screen | Who | What |
 |---|---|---|
-| Daily | Everyone | Sales, cups, orders and average order against the same weekday last week; orders by hour; best sellers; payments; cashiers; sugar and ice; cancellations |
+| Daily | Everyone | Sales, cups, orders and average order against the same weekday last week; orders by hour; sales by item (every drink sold, with category totals); payments; cashiers; sugar and ice; cancellations |
 | Sales | Everyone | A date range, day by day, average by weekday, CSV export |
-| Best sellers | Everyone | Every drink ranked by cups or sales, with category totals |
+| Best sellers | Everyone | Every drink ranked by cups or sales, with a total and category totals; opens on today, with yesterday or a range one tap away |
 | By time | Everyone | Average cups per weekday and hour, prep time, top drink by time of day |
 | Attendance | Owner | Who clocked in, missed clock-outs, adding or correcting a day |
 | Salary and commission | Owner | Base salary plus commission per month, day-by-day detail, approve and lock |
