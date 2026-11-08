@@ -36,6 +36,11 @@ export function shortDate(date: string): string {
 	});
 }
 
+/** "1 Jan 2026" */
+export function dayMonthYear(date: string): string {
+	return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { ...UTC, day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function weekdayShort(date: string): string {
 	return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { ...UTC, weekday: 'short' });
 }

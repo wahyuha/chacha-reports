@@ -18,6 +18,7 @@
 		},
 		...(auth.isOwner
 			? [
+					{ title: 'Menu', links: [{ href: '/costs', label: 'Menu costs (HPP)' }] },
 					{
 						title: 'Team',
 						links: [

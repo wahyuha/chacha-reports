@@ -79,6 +79,44 @@ function products(from: string, to: string) {
 	});
 }
 
+// HPP per cup from the sheet: [ingredients, packaging]. Mango Tea is left without one to show that state.
+const COSTS: Record<string, [number, number]> = {
+	cmt: [5389, 2540], pom: [6793, 2540], jmt: [5206, 2540], mcl: [6263, 1000], mcr: [8563, 1000], pot: [4058, 1223]
+};
+const costHistory: Record<string, { from: string; ingredients: number; packaging: number; updated_at: string }[]> = Object.fromEntries(
+	Object.entries(COSTS).map(([code, [ingredients, packaging]]) => [code, [{ from: '2026-01-01', ingredients, packaging, updated_at: '2026-11-08T03:00:00Z' }]])
+);
+const hppOn = (code: string, date: string) => {
+	const h = (costHistory[code] ?? []).filter((c) => c.from <= date).sort((x, y) => (x.from < y.from ? 1 : -1))[0];
+	return h ? h.ingredients + h.packaging : null;
+};
+
+function margin(from: string, to: string) {
+	const lines = inRange(from, to).flatMap((o) => o.items.map((it) => {
+		const m = MENU[it.i];
+		return { date: o.date, code: m[0], cups: it.qty, sales: it.qty * m[3], hpp: hppOn(m[0], o.date) };
+	}));
+	const sum = (ls: typeof lines) => ({
+		cups: ls.reduce((a, l) => a + l.cups, 0),
+		sales: ls.reduce((a, l) => a + l.sales, 0),
+		cost: ls.reduce((a, l) => a + (l.hpp ?? 0) * l.cups, 0),
+		costed_sales: ls.filter((l) => l.hpp != null).reduce((a, l) => a + l.sales, 0),
+		uncosted_cups: ls.filter((l) => l.hpp == null).reduce((a, l) => a + l.cups, 0)
+	});
+	return {
+		totals: sum(lines),
+		products: [...group(lines, (l) => l.code)].map(([code, ls]) => ({ code, ...sum(ls) })),
+		days: [...group(lines, (l) => l.date)].map(([date, ls]) => ({ date, ...sum(ls) }))
+	};
+}
+
+function menuCosts() {
+	return MENU.map(([code, name, category, price]) => {
+		const history = [...(costHistory[code] ?? [])].sort((x, y) => (x.from < y.from ? 1 : -1));
+		return { code, name, category, price, active: true, current: history.find((h) => h.from <= today()) ?? null, history };
+	});
+}
+
 function payroll(month: string) {
 	const first = `${month.slice(0, 7)}-01`;
 	const days: string[] = [];
@@ -183,6 +221,19 @@ export function demoRpc(fn: string, a: Record<string, any> = {}): unknown {
 			return attendance(a.p_month);
 		case 'payroll_month':
 			return payroll(a.p_month);
+		case 'report_margin':
+			return margin(a.p_from, a.p_to);
+		case 'menu_costs_list':
+			return menuCosts();
+		case 'menu_cost_save': {
+			const list = (costHistory[a.p_code] ??= []).filter((h) => h.from !== a.p_from);
+			list.push({ from: a.p_from, ingredients: a.p_ingredients, packaging: a.p_packaging, updated_at: new Date().toISOString() });
+			costHistory[a.p_code] = list;
+			return null;
+		}
+		case 'menu_cost_delete':
+			costHistory[a.p_code] = (costHistory[a.p_code] ?? []).filter((h) => h.from !== a.p_from);
+			return null;
 		default:
 			return null;
 	}

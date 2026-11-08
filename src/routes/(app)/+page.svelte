@@ -1,8 +1,13 @@
 <script lang="ts">
+	import { auth } from '$lib/auth.svelte';
 	import BarChart from '$lib/components/BarChart.svelte';
+	import ItemCards from '$lib/components/ItemCards.svelte';
+	import ItemTable from '$lib/components/ItemTable.svelte';
 	import Kpi from '$lib/components/Kpi.svelte';
 	import Status from '$lib/components/Status.svelte';
-	import { addDays, change, clock, dateTime, longDate, rupiah, share, today, weekdayOf } from '$lib/format';
+	import { addDays, change, dateTime, longDate, rupiah, share, today, weekdayOf } from '$lib/format';
+	import type { Item } from '$lib/items';
+	import { loadMargin, marginOf, marginPct, pct, type MarginReport } from '$lib/margin';
 	import { outlets } from '$lib/outlet.svelte';
 	import { rpc } from '$lib/supabase';
 
@@ -22,29 +27,35 @@
 		freshness: { last_received_at: string | null; device_seen_at: string | null };
 	};
 	type Metric = 'orders' | 'cups' | 'sales';
-	type Item = { code: string; name: string; category: string; cups: number; sales: number };
 
 	let date = $state(today());
 	let metric = $state<Metric>('orders');
-	let itemSort = $state<'cups' | 'sales'>('cups');
 	let report = $state<Report | null>(null);
 	let items = $state<Item[]>([]);
+	let margin = $state<MarginReport | null>(null);
+	let marginBefore = $state<MarginReport | null>(null);
 	let loading = $state(true);
 	let error = $state('');
 
 	$effect(() => {
 		const code = outlets.code;
 		const day = date;
+		const owner = auth.isOwner;
+		const week = addDays(day, -7);
 		loading = true;
 		error = '';
 		Promise.all([
 			rpc<Report>('report_daily', { p_outlet: code, p_date: day }),
-			rpc<Item[]>('report_products', { p_outlet: code, p_from: day, p_to: day })
+			rpc<Item[]>('report_products', { p_outlet: code, p_from: day, p_to: day }),
+			owner ? loadMargin(code, day, day) : null,
+			owner ? loadMargin(code, week, week) : null
 		])
-			.then(([r, list]) => {
+			.then(([r, list, m, before]) => {
 				if (day !== date) return;
 				report = r;
 				items = list;
+				margin = m;
+				marginBefore = before;
 			})
 			.catch((e) => (error = e.message))
 			.finally(() => (loading = false));
@@ -84,18 +95,12 @@
 	};
 	const itemCups = $derived(items.reduce((a, r) => a + Number(r.cups), 0));
 	const itemSales = $derived(items.reduce((a, r) => a + Number(r.sales), 0));
-	const itemCategories = $derived.by(() => {
-		const map = new Map<string, { cups: number; sales: number }>();
-		for (const r of items) {
-			const c = map.get(r.category) ?? { cups: 0, sales: 0 };
-			c.cups += Number(r.cups);
-			c.sales += Number(r.sales);
-			map.set(r.category, c);
-		}
-		return [...map.entries()].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.cups - a.cups);
+	const marginNote = $derived.by(() => {
+		if (!margin) return '';
+		const parts = [`${pct(marginPct(margin.totals))} of sales`];
+		if (marginBefore) parts.push(compared(marginOf(margin.totals), marginOf(marginBefore.totals)));
+		return parts.join(' · ');
 	});
-	const sortedItems = $derived([...items].sort((a, b) => Number(b[itemSort]) - Number(a[itemSort]) || Number(b.cups) - Number(a.cups)));
-	const itemMax = $derived(Math.max(1, ...items.map((r) => Number(r.cups))));
 </script>
 
 <svelte:head><title>Daily · Chacha Reports</title></svelte:head>
@@ -144,6 +149,9 @@
 		<Kpi label="Cups" value={String(report.totals.cups)} note={compared(report.totals.cups, report.compare.cups)} />
 		<Kpi label="Orders" value={String(report.totals.orders)} note={compared(report.totals.orders, report.compare.orders)} />
 		<Kpi label="Average order" value={rupiah(report.totals.avg_order)} note={compared(report.totals.avg_order, report.compare.avg_order)} />
+		{#if margin}
+			<Kpi label="Gross margin" value={rupiah(marginOf(margin.totals))} note={marginNote} />
+		{/if}
 		<Kpi label="Prep time (median)" value={report.prep_median_min == null ? '–' : `${report.prep_median_min} min`} note="Paid to done" />
 	</section>
 
@@ -168,55 +176,11 @@
 		</section>
 
 		<section class="card min-w-0">
-			<div class="flex flex-wrap items-center justify-between gap-3">
-				<div>
-					<h2 class="card-title m-0">Sales by item</h2>
-					<div class="num text-muted">{items.length} drinks · {itemCups} cups · {rupiah(itemSales)}</div>
-				</div>
-				<div role="group" aria-label="Sort by" class="flex gap-1">
-					<button class="btn {itemSort === 'cups' ? 'btn-primary' : ''}" aria-pressed={itemSort === 'cups'} onclick={() => (itemSort = 'cups')}>Most cups</button>
-					<button class="btn {itemSort === 'sales' ? 'btn-primary' : ''}" aria-pressed={itemSort === 'sales'} onclick={() => (itemSort = 'sales')}>Most sales</button>
-				</div>
-			</div>
-			<div class="mt-4 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
-				{#each itemCategories as c}
-					<div class="rounded-xl border border-stone p-4">
-						<div class="eyebrow">{c.name}</div>
-						<div class="num mt-1 text-xl font-bold">{c.cups} cups</div>
-						<div class="num text-muted">{rupiah(c.sales)} · {share(c.cups, itemCups)}% of cups</div>
-					</div>
-				{/each}
-			</div>
-			<div class="mt-3 overflow-x-auto">
-				<table class="num w-full min-w-[640px] border-collapse text-right">
-					<thead>
-						<tr>
-							<th scope="col" class="th w-8 text-left">#</th>
-							<th scope="col" class="th text-left">Drink</th>
-							<th scope="col" class="th text-left">Category</th>
-							<th scope="col" class="th">Cups</th>
-							<th scope="col" class="th w-52 text-left">Share of cups</th>
-							<th scope="col" class="th">Sales</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each sortedItems as r, i}
-							<tr>
-								<td class="td text-left text-muted">{i + 1}</td>
-								<td class="td text-left font-semibold">{r.name}</td>
-								<td class="td text-left text-muted">{r.category}</td>
-								<td class="td">{r.cups}</td>
-								<td class="td">
-									<div class="flex items-center gap-2">
-										<div class="h-2 flex-auto rounded bg-mist-soft"><div class="h-2 rounded bg-forest" style:width="{(Number(r.cups) / itemMax) * 100}%"></div></div>
-										<span class="w-9">{share(Number(r.cups), itemCups)}%</span>
-									</div>
-								</td>
-								<td class="td">{rupiah(r.sales)}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+			<h2 class="card-title m-0">Sales by item</h2>
+			<div class="num mb-4 text-muted">{items.length} drinks · {itemCups} cups · {rupiah(itemSales)}</div>
+			<ItemCards {items} {margin} />
+			<div class="mt-6">
+				<ItemTable {items} {margin} title="Every drink" />
 			</div>
 		</section>
 

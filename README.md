@@ -12,11 +12,23 @@ It's a client-side SvelteKit app on Netlify, reading the POS data in Supabase th
 | Sales | Everyone | A date range, day by day, average by weekday, CSV export |
 | Best sellers | Everyone | Every drink ranked by cups or sales, with a total and category totals; opens on today, with yesterday or a range one tap away |
 | By time | Everyone | Average cups per weekday and hour, prep time, top drink by time of day |
+| Menu costs (HPP) | Owner | HPP per cup (ingredients + packaging) per drink, food cost and margin per cup, changes with an "applies from" date and history |
 | Attendance | Owner | Who clocked in, missed clock-outs, adding or correcting a day |
 | Salary and commission | Owner | Base salary plus commission per month, day-by-day detail, approve and lock |
 | Users | Owner | Invite, resend, remove |
 
 Numbers match the POS Today screen: cancelled orders are left out and cups are the sum of quantities. Hours use outlet time (WIB), and the `TEST` outlet never appears.
+
+## Margin
+
+Owners also see gross margin on Daily, Sales and Best sellers. Viewers don't see costs or margin.
+
+- HPP per cup = ingredients + packaging, from the "Final HPP_Chacha" sheet. Staff, rent and utilities aren't included.
+- Margin = price charged − HPP, per cup sold. Cancelled orders don't count.
+- A new HPP applies from the date chosen; earlier days keep the HPP they were sold at.
+- Drinks with no HPP are counted as "cups without HPP" and left out of the margin, never counted as pure profit.
+- Food cost above 45% of the price is marked High.
+- Sugar level doesn't change HPP: every cup uses the standard recipe.
 
 ## Pay rules
 
@@ -47,6 +59,6 @@ Netlify builds and deploys every push to `main`. Work on a `feature/…` branch 
 
 ## Database
 
-The migrations are in `supabase/migrations` and continue the POS project's `001` and `002`. Run them in order in the Supabase SQL editor. The `manage-users` Edge Function is in `supabase/functions` and is deployed from the Supabase dashboard.
+The migrations (`003` reports, `004` attendance and payroll, `005` HPP and margin) are in `supabase/migrations` and continue the POS project's `001` and `002`. Run them in order in the Supabase SQL editor. The `manage-users` Edge Function is in `supabase/functions` and is deployed from the Supabase dashboard.
 
 The first owner comes from the `dashboard_bootstrap` table, which is filled in directly in the database, never in this public repository. Creating that email's user in Supabase makes it an owner, and it must set a new password at first sign-in.
