@@ -10,7 +10,7 @@ It's a client-side SvelteKit app on Netlify, reading the POS data in Supabase th
 |---|---|---|
 | Daily | Everyone | Sales, cups, orders and average order against the same weekday last week; orders by hour; sales by item (every drink sold, with category totals); payments; cashiers; sugar and ice; cancellations |
 | Sales | Everyone | A date range, day by day, average by weekday, CSV export |
-| Best sellers | Everyone | Every drink ranked by cups or sales, with a total and category totals; opens on today, with yesterday or a range one tap away |
+| Best sellers | Everyone | Every drink ranked by cups or sales, with a total and category totals; opens on today, with yesterday or a range one tap away; a closed "Custom sugar and ice" section lists drinks ordered with less sugar, zero sugar or less ice |
 | By time | Everyone | Average cups per weekday and hour, prep time, top drink by time of day |
 | Menu costs (HPP) | Owner | HPP per cup (ingredients + packaging) per drink, food cost and margin per cup, changes with an "applies from" date and history |
 | Attendance | Owner | Who clocked in, missed clock-outs, adding or correcting a day |
@@ -59,6 +59,6 @@ Netlify builds and deploys every push to `main`. Work on a `feature/…` branch 
 
 ## Database
 
-The migrations (`003` reports, `004` attendance and payroll, `005` HPP and margin) are in `supabase/migrations` and continue the POS project's `001` and `002`. Run them in order in the Supabase SQL editor. The `manage-users` Edge Function is in `supabase/functions` and is deployed from the Supabase dashboard.
+The migrations (`003` reports, `004` attendance and payroll, `005` HPP and margin, `006` custom sugar and ice) are in `supabase/migrations` and continue the POS project's `001` and `002`. Run them in order in the Supabase SQL editor. The `manage-users` Edge Function is in `supabase/functions` and is deployed from the Supabase dashboard.
 
 The first owner comes from the `dashboard_bootstrap` table, which is filled in directly in the database, never in this public repository. Creating that email's user in Supabase makes it an owner, and it must set a new password at first sign-in.

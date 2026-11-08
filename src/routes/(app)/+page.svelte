@@ -195,7 +195,10 @@
 				<div class="mt-2.5 border-t border-stone pt-2.5 text-muted">By who was signed in when the order was charged.</div>
 			</section>
 			<section class="card !p-5">
-				<h2 class="m-0 mb-3 font-display text-xl font-medium">Sugar and ice</h2>
+				<div class="mb-3 flex items-baseline justify-between gap-3">
+					<h2 class="m-0 font-display text-xl font-medium">Sugar and ice</h2>
+					<a class="text-forest underline" href="/products?date={date}&custom#custom-title">Which drinks?</a>
+				</div>
 				{#each [['Sugar', report.sugar, ['normal', 'less', 'zero']], ['Ice', report.ice, ['normal', 'less']]] as const as [name, levels, order], g}
 					<h3 class="m-0 text-base font-semibold {g ? 'mt-3' : ''}">{name}</h3>
 					<dl class="m-0">

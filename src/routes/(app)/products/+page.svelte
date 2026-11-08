@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { auth } from '$lib/auth.svelte';
+	import CustomSugarIce from '$lib/components/CustomSugarIce.svelte';
 	import ItemCards from '$lib/components/ItemCards.svelte';
 	import ItemTable from '$lib/components/ItemTable.svelte';
 	import RangePicker from '$lib/components/RangePicker.svelte';
@@ -10,8 +12,12 @@
 	import { outlets } from '$lib/outlet.svelte';
 	import { rpc } from '$lib/supabase';
 
-	let to = $state(today());
-	let from = $state(today());
+	// Daily's "Which drinks?" link opens this page on its day, with Custom sugar and ice open.
+	const askedDay = page.url.searchParams.get('date');
+	const startDay = askedDay && /^\d{4}-\d{2}-\d{2}$/.test(askedDay) && askedDay <= today() ? askedDay : today();
+	let to = $state(startDay);
+	let from = $state(startDay);
+	let customOpen = $state(page.url.searchParams.has('custom'));
 	let rows = $state<Item[] | null>(null);
 	let margin = $state<MarginReport | null>(null);
 	let loading = $state(true);
@@ -67,4 +73,6 @@
 	<section class="card">
 		<ItemTable items={shown} {margin} title={category === 'All' ? 'All drinks' : category} subtitle="{shownCups} cups · {rupiah(shownSales)}" />
 	</section>
+
+	<CustomSugarIce {from} {to} {category} bind:open={customOpen} />
 {/if}

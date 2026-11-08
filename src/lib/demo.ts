@@ -110,6 +110,26 @@ function margin(from: string, to: string) {
 	};
 }
 
+/** Less or zero sugar and less ice, picked per order line from a fixed hash so the numbers stay put. */
+function custom(from: string, to: string) {
+	const rows = new Map<string, { code: string; name: string; category: string; cups: number; less_sugar: number; zero_sugar: number; less_ice: number }>();
+	inRange(from, to).forEach((o, n) => {
+		for (const it of o.items) {
+			const [code, name, category] = MENU[it.i];
+			const r = rows.get(code) ?? { code, name, category, cups: 0, less_sugar: 0, zero_sugar: 0, less_ice: 0 };
+			const h = (n * 7919 + it.i * 104729 + o.hour * 31) % 100;
+			r.cups += it.qty;
+			if (h < 12 + it.i * 2) r.less_sugar += it.qty;
+			else if (h >= 95 - it.i) r.zero_sugar += it.qty;
+			if ((h * 3) % 100 < 10) r.less_ice += it.qty;
+			rows.set(code, r);
+		}
+	});
+	return [...rows.values()]
+		.filter((r) => r.less_sugar + r.zero_sugar + r.less_ice > 0)
+		.sort((a, b) => b.less_sugar + b.zero_sugar - (a.less_sugar + a.zero_sugar) || b.less_ice - a.less_ice || b.cups - a.cups);
+}
+
 function menuCosts() {
 	return MENU.map(([code, name, category, price]) => {
 		const history = [...(costHistory[code] ?? [])].sort((x, y) => (x.from < y.from ? 1 : -1));
@@ -223,6 +243,8 @@ export function demoRpc(fn: string, a: Record<string, any> = {}): unknown {
 			return payroll(a.p_month);
 		case 'report_margin':
 			return margin(a.p_from, a.p_to);
+		case 'report_custom':
+			return custom(a.p_from, a.p_to);
 		case 'menu_costs_list':
 			return menuCosts();
 		case 'menu_cost_save': {
