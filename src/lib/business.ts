@@ -12,7 +12,7 @@ export type Roi = {
 	recent: { days: number; sales_days: number; cups: number; net: number; gross: number; costed_cups: number };
 	month_base: number;
 	month_costs: number;
-	rule: { threshold_cups: number; rate_per_cup: number } | null;
+	rule: { from: string; threshold_cups: number; rate_per_cup: number; split: boolean } | null;
 };
 
 export const DAYS_PER_MONTH = 365 / 12;
@@ -30,7 +30,7 @@ export const fixedPerDay = (r: Roi) => (Number(r.month_base) + Number(r.month_co
 
 /**
  * Cups a day needed to cover HPP, staff and monthly costs and still make `extraPerDay` net profit.
- * Each cup above the commission threshold pays commission to every staff member on duty.
+ * Each cup above the commission threshold pays commission: once, shared by the staff on duty, or to each of them.
  * Null when the margin per cup can't cover it.
  */
 export function cupsNeeded(r: Roi, extraPerDay = 0): number | null {
@@ -38,7 +38,8 @@ export function cupsNeeded(r: Roi, extraPerDay = 0): number | null {
 	if (m == null || m <= 0) return null;
 	const target = fixedPerDay(r) + extraPerDay;
 	const t = Number(r.rule?.threshold_cups ?? 0);
-	const perCupCommission = Number(r.rule?.rate_per_cup ?? 0) * Number(r.staff_per_day);
+	const rate = Number(r.rule?.rate_per_cup ?? 0);
+	const perCupCommission = r.rule?.split ? rate : rate * Number(r.staff_per_day);
 	if (m * t >= target) return Math.ceil(target / m);
 	const slope = m - perCupCommission;
 	if (slope <= 0) return null;

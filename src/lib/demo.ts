@@ -146,7 +146,7 @@ const opCosts: Record<string, { name: string; history: { from: string; amount: n
 	internet: { name: 'Internet', history: [{ from: '2026-11-01', amount: 200000, updated_at: '2026-11-10T03:00:00Z' }] }
 };
 let capitalItems = [{ id: 'c1', name: 'Starting capital', amount: 20000000 }];
-const settings = { opened_on: OPENED, payback_months: 12, staff_per_day: 1 };
+const settings = { opened_on: OPENED, payback_months: 12, staff_per_day: 2 };
 
 const monthOf = (d: string) => `${d.slice(0, 7)}-01`;
 const daysIn = (month: string) => new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 0)).getUTCDate();
@@ -161,7 +161,7 @@ function dailyNet(from: string, to: string) {
 		const m = margin(d, d).totals;
 		const month = monthOf(d);
 		const n = daysIn(month);
-		const commission = working(d).length * Math.max(0, dayCups(d) - 20) * 1000;
+		const commission = working(d).length ? Math.max(0, dayCups(d) - 20) * 1000 : 0;
 		const base = Math.round(baseIn().reduce((a, b) => a + b.base_salary, 0) / n);
 		const fixed = Math.round(costsIn(month).reduce((a, c) => a + c.amount, 0) / n);
 		out.push({ date: d, cups: m.cups, sales: m.sales, cost: m.cost, costed_sales: m.costed_sales, uncosted_cups: m.uncosted_cups, commission, base, fixed, net: m.costed_sales - m.cost - commission - base - fixed });
@@ -197,7 +197,7 @@ function roiReport() {
 		capital: capitalItems, net_to_date: days.reduce((a, d) => a + d.net, 0), months,
 		recent: { days: recent.length, sales_days: recent.filter((d) => d.cups > 0).length, cups: recent.reduce((a, d) => a + d.cups, 0), net: recent.reduce((a, d) => a + d.net, 0), gross: recent.reduce((a, d) => a + d.costed_sales - d.cost, 0), costed_cups: recent.reduce((a, d) => a + d.cups - d.uncosted_cups, 0) },
 		month_base: 3000000, month_costs: costsIn(monthOf(today())).reduce((a, c) => a + c.amount, 0),
-		rule: { threshold_cups: 20, rate_per_cup: 1000 }
+		rule: { from: '2026-11-01', threshold_cups: 20, rate_per_cup: 1000, split: true }
 	};
 }
 
@@ -205,13 +205,13 @@ function payroll(month: string) {
 	const first = `${month.slice(0, 7)}-01`;
 	const days: string[] = [];
 	for (let d = first; d.slice(0, 7) === first.slice(0, 7) && d <= today(); d = addDays(d, 1)) days.push(d);
-	const commissionOn = (d: string) => Math.max(0, dayCups(d) - 20) * 1000;
+	const commissionOn = (d: string) => Math.floor((Math.max(0, dayCups(d) - 20) * 1000) / Math.max(1, working(d).length));
 	return {
 		month: first,
 		status: 'draft',
 		locked_at: null,
 		can_lock: first < `${today().slice(0, 7)}-01`,
-		rule: { threshold_cups: 20, rate_per_cup: 1000 },
+		rule: { from: '2026-11-01', threshold_cups: 20, rate_per_cup: 1000, split: true },
 		outlet_days: days.map((d) => ({ date: d, cups: dayCups(d), commission: commissionOn(d) })),
 		lines: STAFF.map((s) => {
 			const mine = days.filter((d) => working(d).some((w) => w.code === s.code));

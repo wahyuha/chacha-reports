@@ -147,7 +147,7 @@
 			<button type="button" class="btn" onclick={() => (settings = null)}>Cancel</button>
 		</form>
 		<p class="m-0 mt-2 text-[13px] text-muted">
-			Staff per day is only for forecasts: each one earns commission on cups above the daily threshold. Real months use the real clock-ins.
+			Staff per day is only for forecasts. Real months use the real clock-ins and the commission rule on the Salary screen.
 		</p>
 	</section>
 {/if}
@@ -245,7 +245,9 @@
 		<p class="m-0 mt-3 text-[13px] text-muted">
 			Assumes the last 30 days' gross margin of {margin == null ? '–' : rupiah(Math.round(margin))} a cup, {rupiah(Math.round(fixedPerDay(roi) * DAYS_PER_MONTH))}
 			a month in base salaries and monthly costs, and commission of {rupiah(roi.rule?.rate_per_cup ?? 0)} a cup from cup
-			{(roi.rule?.threshold_cups ?? 0) + 1} for {roi.staff_per_day} staff a day.
+			{(roi.rule?.threshold_cups ?? 0) + 1}{roi.rule?.split
+				? `, shared by ${roi.staff_per_day} staff a day`
+				: ` for each of ${roi.staff_per_day} staff a day`}.
 		</p>
 	</section>
 

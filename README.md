@@ -43,9 +43,9 @@ Owners also see gross margin on Daily, Sales and Best sellers. Viewers don't see
 ## Pay rules
 
 - Monthly base salary: Neli and Ugan Rp 1.500.000 each; Meirisa and Laura Rp 0 from November 2026 (commission only). No deductions. Change it per person on the Salary screen; it applies from the month shown onward.
-- Commission: Rp 1.000 per cup from cup 21, counted on the outlet's cups for the day. Everyone who clocked in that day earns the full amount. No minimum time.
+- Commission: Rp 1.000 per cup from cup 21, counted on the outlet's cups for the day. From November 2026 the amount is shared equally (rounded down to whole rupiah) by everyone who clocked in that day, so Rp 500 each for two people. No minimum time.
 - Approving a month locks it. Orders that sync or are cancelled later are paid as a correction the next month.
-- To change the rule, add a row to `commission_rules` with a new `effective_from` date; earlier months keep the old rule.
+- Change the rule on the Salary and commission screen ("Change the rule"). It applies from the month chosen; approved months keep their rule.
 
 ## Develop
 
@@ -69,6 +69,6 @@ Netlify builds and deploys every push to `main`. Work on a `feature/…` branch 
 
 ## Database
 
-The migrations (`003` reports, `004` attendance and payroll, `005` HPP and margin, `006` custom sugar and ice, `007` monthly costs, profit and ROI) are in `supabase/migrations` and continue the POS project's `001` and `002`. Run them in order in the Supabase SQL editor. The `manage-users` Edge Function is in `supabase/functions` and is deployed from the Supabase dashboard.
+The migrations (`003` reports, `004` attendance and payroll, `005` HPP and margin, `006` custom sugar and ice, `007` monthly costs, profit and ROI, `008` shared commission) are in `supabase/migrations` and continue the POS project's `001` and `002`. Run them in order in the Supabase SQL editor. The `manage-users` Edge Function is in `supabase/functions` and is deployed from the Supabase dashboard.
 
 The first owner comes from the `dashboard_bootstrap` table, which is filled in directly in the database, never in this public repository. Creating that email's user in Supabase makes it an owner, and it must set a new password at first sign-in.
