@@ -137,6 +137,70 @@ function menuCosts() {
 	});
 }
 
+const BASE: Record<string, number> = { neli: 1500000, ugan: 1500000 };
+const OPENED = addDays(today(), -120);
+const opCosts: Record<string, { name: string; history: { from: string; amount: number; updated_at: string }[] }> = {
+	rent: { name: 'Rent', history: [{ from: '2026-11-01', amount: 2000000, updated_at: '2026-11-10T03:00:00Z' }] },
+	water: { name: 'Water', history: [{ from: '2026-11-01', amount: 100000, updated_at: '2026-11-10T03:00:00Z' }] },
+	electricity: { name: 'Electricity', history: [{ from: '2026-11-01', amount: 200000, updated_at: '2026-11-10T03:00:00Z' }] },
+	internet: { name: 'Internet', history: [{ from: '2026-11-01', amount: 200000, updated_at: '2026-11-10T03:00:00Z' }] }
+};
+let capitalItems = [{ id: 'c1', name: 'Starting capital', amount: 20000000 }];
+const settings = { opened_on: OPENED, payback_months: 12, staff_per_day: 1 };
+
+const monthOf = (d: string) => `${d.slice(0, 7)}-01`;
+const daysIn = (month: string) => new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 0)).getUTCDate();
+/** Demo costs apply to every month, so earlier demo months have costs too. */
+const costsIn = (_month: string) =>
+	Object.entries(opCosts).map(([code, c]) => ({ code, name: c.name, amount: [...c.history].sort((x, y) => (x.from < y.from ? 1 : -1))[0]?.amount ?? 0 }));
+const baseIn = () => STAFF.filter((s) => BASE[s.code]).map((s) => ({ name: s.name, base_salary: BASE[s.code] }));
+
+function dailyNet(from: string, to: string) {
+	const out = [];
+	for (let d = from; d <= to; d = addDays(d, 1)) {
+		const m = margin(d, d).totals;
+		const month = monthOf(d);
+		const n = daysIn(month);
+		const commission = working(d).length * Math.max(0, dayCups(d) - 20) * 1000;
+		const base = Math.round(baseIn().reduce((a, b) => a + b.base_salary, 0) / n);
+		const fixed = Math.round(costsIn(month).reduce((a, c) => a + c.amount, 0) / n);
+		out.push({ date: d, cups: m.cups, sales: m.sales, cost: m.cost, costed_sales: m.costed_sales, uncosted_cups: m.uncosted_cups, commission, base, fixed, net: m.costed_sales - m.cost - commission - base - fixed });
+	}
+	return out;
+}
+
+function pnl(month: string) {
+	const m = monthOf(month);
+	const n = daysIn(m);
+	const end = `${m.slice(0, 8)}${n}`;
+	const from = m < OPENED ? OPENED : m;
+	const to = end < today() ? end : today();
+	if (to < from) return { month: m, opened_on: OPENED, from: null, to: null, days_in_month: n, days_counted: 0 };
+	const days = dailyNet(from, to);
+	const k = days.length;
+	const sum = (key: string) => days.reduce((a, d: any) => a + d[key], 0);
+	return {
+		month: m, opened_on: OPENED, from, to, days_in_month: n, days_counted: k, complete: to === end,
+		totals: { cups: sum('cups'), sales: sum('sales'), cost: sum('cost'), costed_sales: sum('costed_sales'), uncosted_cups: sum('uncosted_cups'), commission: sum('commission') },
+		staff: baseIn().map((b) => ({ name: b.name, month_amount: b.base_salary, amount: Math.round((b.base_salary * k) / n) })),
+		costs: costsIn(m).filter((c) => c.amount).map((c) => ({ ...c, month_amount: c.amount, amount: Math.round((c.amount * k) / n) })),
+		days: days.map((d) => ({ date: d.date, cups: d.cups, gross: d.costed_sales - d.cost, net: d.net }))
+	};
+}
+
+function roiReport() {
+	const days = dailyNet(settings.opened_on, today());
+	const recent = days.filter((d) => d.date > addDays(today(), -30));
+	const months = [...group(days, (d) => monthOf(d.date))].map(([month, ds]) => ({ month, net: ds.reduce((a, d) => a + d.net, 0) }));
+	return {
+		today: today(), opened_on: settings.opened_on, days_open: days.length, payback_months: settings.payback_months, staff_per_day: settings.staff_per_day,
+		capital: capitalItems, net_to_date: days.reduce((a, d) => a + d.net, 0), months,
+		recent: { days: recent.length, sales_days: recent.filter((d) => d.cups > 0).length, cups: recent.reduce((a, d) => a + d.cups, 0), net: recent.reduce((a, d) => a + d.net, 0), gross: recent.reduce((a, d) => a + d.costed_sales - d.cost, 0), costed_cups: recent.reduce((a, d) => a + d.cups - d.uncosted_cups, 0) },
+		month_base: 3000000, month_costs: costsIn(monthOf(today())).reduce((a, c) => a + c.amount, 0),
+		rule: { threshold_cups: 20, rate_per_cup: 1000 }
+	};
+}
+
 function payroll(month: string) {
 	const first = `${month.slice(0, 7)}-01`;
 	const days: string[] = [];
@@ -153,8 +217,8 @@ function payroll(month: string) {
 			const mine = days.filter((d) => working(d).some((w) => w.code === s.code));
 			const commission = mine.reduce((a, d) => a + commissionOn(d), 0);
 			return {
-				staff_code: s.code, staff_name: s.name, days_worked: mine.length, base_salary: 1500000, commission, correction: 0,
-				total: 1500000 + commission, days: mine.map((d) => ({ date: d, cups: dayCups(d), commission: commissionOn(d) }))
+				staff_code: s.code, staff_name: s.name, days_worked: mine.length, base_salary: BASE[s.code] ?? 0, commission, correction: 0,
+				total: (BASE[s.code] ?? 0) + commission, days: mine.map((d) => ({ date: d, cups: dayCups(d), commission: commissionOn(d) }))
 			};
 		})
 	};
@@ -243,6 +307,35 @@ export function demoRpc(fn: string, a: Record<string, any> = {}): unknown {
 			return payroll(a.p_month);
 		case 'report_margin':
 			return margin(a.p_from, a.p_to);
+		case 'report_pnl':
+			return pnl(a.p_month);
+		case 'report_roi':
+			return roiReport();
+		case 'operating_costs_list':
+			return Object.entries(opCosts).map(([code, c]) => {
+				const history = [...c.history].sort((x, y) => (x.from < y.from ? 1 : -1));
+				return { code, name: c.name, current: history.find((h) => h.from <= today()) ?? null, history };
+			});
+		case 'operating_cost_save': {
+			const code = a.p_code ?? String(a.p_name).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+			const c = (opCosts[code] ??= { name: a.p_name, history: [] });
+			c.name = a.p_name;
+			c.history = [...c.history.filter((h) => h.from !== a.p_from), { from: a.p_from, amount: a.p_amount, updated_at: new Date().toISOString() }];
+			return null;
+		}
+		case 'operating_cost_delete':
+			opCosts[a.p_code].history = opCosts[a.p_code].history.filter((h) => h.from !== a.p_from);
+			return null;
+		case 'capital_item_save':
+			if (a.p_id) capitalItems = capitalItems.map((c) => (c.id === a.p_id ? { ...c, name: a.p_name, amount: a.p_amount } : c));
+			else capitalItems = [...capitalItems, { id: String(Date.now()), name: a.p_name, amount: a.p_amount }];
+			return null;
+		case 'capital_item_delete':
+			capitalItems = capitalItems.filter((c) => c.id !== a.p_id);
+			return null;
+		case 'business_settings_save':
+			Object.assign(settings, { opened_on: a.p_opened_on, payback_months: a.p_payback_months, staff_per_day: a.p_staff_per_day });
+			return null;
 		case 'report_custom':
 			return custom(a.p_from, a.p_to);
 		case 'menu_costs_list':

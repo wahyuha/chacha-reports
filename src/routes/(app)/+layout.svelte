@@ -18,6 +18,14 @@
 		},
 		...(auth.isOwner
 			? [
+					{
+						title: 'Business',
+						links: [
+							{ href: '/profit', label: 'Profit and loss' },
+							{ href: '/roi', label: 'Return on investment' },
+							{ href: '/monthly-costs', label: 'Monthly costs' }
+						]
+					},
 					{ title: 'Menu', links: [{ href: '/costs', label: 'Menu costs (HPP)' }] },
 					{
 						title: 'Team',

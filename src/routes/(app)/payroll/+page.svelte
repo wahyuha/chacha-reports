@@ -60,8 +60,11 @@
 		load();
 	});
 
-	const sum = (key: 'base_salary' | 'commission' | 'correction' | 'total') =>
-		(report?.lines ?? []).reduce((a, l) => a + Number(l[key]), 0);
+	// People without a base salary only show in months they clocked in or are owed something.
+	const lines = $derived(
+		(report?.lines ?? []).filter((l) => Number(l.base_salary) || Number(l.days_worked) || Number(l.commission) || Number(l.correction))
+	);
+	const sum = (key: 'base_salary' | 'commission' | 'correction' | 'total') => lines.reduce((a, l) => a + Number(l[key]), 0);
 	const daysWithCommission = $derived((report?.outlet_days ?? []).filter((d) => Number(d.commission) > 0).length);
 
 	async function act(fn: () => Promise<unknown>) {
@@ -147,7 +150,7 @@
 			<h2 class="card-title m-0">{monthName(report.month)}</h2>
 			<div class="text-muted">{daysWithCommission} days earned commission at the outlet.</div>
 		</div>
-		{#if !report.lines.length}
+		{#if !lines.length}
 			<p class="m-0 mt-3 text-muted">No staff for this outlet.</p>
 		{:else}
 			<div class="mt-3 overflow-x-auto">
@@ -163,7 +166,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each report.lines as l (l.staff_code)}
+						{#each lines as l (l.staff_code)}
 							<tr class={open === l.staff_code ? 'bg-mist-soft' : ''}>
 								<th scope="row" class="td pl-0 text-left">
 									<button class="min-h-11 font-semibold text-forest underline" aria-expanded={open === l.staff_code} onclick={() => (open = open === l.staff_code ? null : l.staff_code)}>
