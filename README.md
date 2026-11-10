@@ -42,7 +42,7 @@ Owners also see gross margin on Daily, Sales and Best sellers. Viewers don't see
 
 ## Pay rules
 
-- Monthly base salary: Neli and Ugan Rp 1.500.000 each; Meirisa and Laura Rp 0 from November 2026 (commission only). No deductions. Change it per person on the Salary screen; it applies from the month shown onward.
+- Monthly base salary: Neli and Ugan Rp 1.250.000 each and Meirisa and Laura Rp 0, from November 2026 (commission only). No deductions. Change it per person on the Salary screen; it applies from the month shown onward.
 - Commission: Rp 1.000 per cup from cup 21, counted on the outlet's cups for the day. From November 2026 the amount is shared equally (rounded down to whole rupiah) by everyone who clocked in that day, so Rp 500 each for two people. No minimum time.
 - Approving a month locks it. Orders that sync or are cancelled later are paid as a correction the next month.
 - Change the rule on the Salary and commission screen ("Change the rule"). It applies from the month chosen; approved months keep their rule.
